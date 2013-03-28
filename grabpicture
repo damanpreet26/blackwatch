@@ -1,0 +1,10 @@
+#!/bin/bash
+sudo timeout 15s motion
+
+NAME=$(who am i | awk '{print $1}')
+cd /home/$NAME/Desktop
+touch illegal_acccess
+now=$(date +"%d-%m-%Y")
+time=$(date +"%r")
+echo "$NAME, There was a breach in HELL on $now at $time " >illegal_acccess
+                            
