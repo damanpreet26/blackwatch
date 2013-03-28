@@ -1,0 +1,48 @@
+#BLACKWATCH version 1.0
+-This is a perfect piece of code for those who want to keep their systems away from unauthorized usage.
+
+-The user gets the error message of wrong passwords being entered into the system.
+-Once you enter a wrong password the webcam automatically takes the 4-5 pictures and makes a video on when the wrong password was entered.
+-The images are kept at a safe location which is /etc/motion/
+-an error file("illegal access") named file is created with the data and time of entry is saved, for the help of the system user.
+
+#REQUIREMENT
+-check the working of the webcam commected to ur system(very important)
+-install software-motion
+    	sudo apt-get install motion
+This is an approach using PAM and will work for all failed login attempts. Using SSH, a virtual terminal or via the regular login screen, it doesn't matter as everything is handled by PAM in the end.
+
+Install ffmpeg , we're going to use this as a command line way of grabbing the webcam images.
+Create a small script somewhere, e.g. /usr/local/bin/grabpicture with the following content:
+
+#!/bin/bash
+ts=`date +%s`
+ffmpeg -f video4linux2 -s vga -i /dev/video0 -vframes 3 /tmp/vid-$ts.%01d.jpg
+exit 0  #important - has to exit with status 0
+Change the /dev/video0 with the actual video device of your webcam and choose a path where the pictures are being saved - I just choose /tmp.
+
+Make it executable, e.g. chmod +x /usr/local/bin/grabpicture.
+
+Test it, by just calling it: /usr/local/bin/grabpicture. Check if you see files appearing in /tmp/vid....jpg.
+
+Configure PAM to call this on every failed attempt.
+
+Note: do this carefully - if this fails you'll not be able to gain access to your system again in a regular way.
+
+Open a terminal window with root access (sudo -i) and leave it open - just in case you screw up in the next steps.
+Open /etc/pam.d/common-auth in your favourite editor, e.g. by doing gksudo gedit /etc/pam.d/common-auth. Keep in mind for the following steps that order of lines in this file matters.
+Locate the line below. By default there's one line before the one with pam_deny.so. On my 12.04 system it looks like this:
+
+auth    [success=1 default=ignore]      pam_unix.so nullok_secure
+In this line change the success=1 to success=2 to have it skip our script on succes. This is an important step.
+
+Right below there, add a new one to call the actual script:
+
+auth    [default=ignore]                pam_exec.so seteuid /usr/local/bin/grabpicture
+Save and close the file. No need to restart anything.
+
+Test it.
+
+In a new terminal window, as regular user, try su -l username to log in as another user with username username (change with an actual one of course). Deliberately enter the wrong password. Check if this result in a new picture.
+The same as above, but now enter the correct password. Check if you log in and it doesn't result in a picture being taken.
+If the tests have succeeded you can log out from your DE (Unity/KDE/...) and you should see the same when entering a wrong password from the login screen.
